@@ -1,0 +1,7 @@
+{
+  "basePort": 5290,
+  "branchPrefix": "feature/",
+  "installer": "npm install",
+  "devCommand": "npm run dev -- --port $DEV_PORT --strictPort",
+  "profile": "personal"
+}
