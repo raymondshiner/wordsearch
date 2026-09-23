@@ -11,8 +11,6 @@ export const THEMES: SheetTheme[] = [
   { id: "classic", label: "Classic", glyphs: [], accent: "" },
   { id: "dragons", label: "Dragons", glyphs: ["🐉", "🔥", "🛡️", "🏰"], accent: "#b91c1c" },
   { id: "unicorns", label: "Unicorns", glyphs: ["🦄", "🌈", "⭐", "✨"], accent: "#a21caf" },
-  { id: "astro-bot", label: "Astro Bot", glyphs: ["🤖", "🚀", "🪐", "⭐"], accent: "#1d4ed8" },
-  { id: "pokemon", label: "Pokemon", glyphs: ["⚡", "👾", "🔴", "🌟"], accent: "#ca8a04" },
   { id: "fall", label: "Fall", glyphs: ["🍂", "🎃", "🍁", "🌰"], accent: "#c2410c" },
   { id: "winter", label: "Winter", glyphs: ["❄️", "⛄", "🧊", "✨"], accent: "#1d4ed8" },
   { id: "spring", label: "Spring", glyphs: ["🌸", "🐝", "🌷", "🦋"], accent: "#15803d" },
