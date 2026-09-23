@@ -92,6 +92,23 @@ async function verify(label, ctx) {
     record(`${label}/shuffle regenerates`, true)
   })
 
+  // 5b) puzzle number is the seed — typing the same № reproduces the grid
+  await step('seed round-trip', async () => {
+    const seedInput = page.getByRole('textbox', { name: 'Puzzle number' })
+    await seedInput.fill('4242')
+    await page.waitForTimeout(200)
+    const original = await page.getByRole('grid').textContent()
+    await seedInput.fill('777')
+    await page.waitForTimeout(200)
+    const different = await page.getByRole('grid').textContent()
+    if (different === original) throw new Error('changing № did not change the grid')
+    await seedInput.fill('4242')
+    await page.waitForTimeout(200)
+    const restored = await page.getByRole('grid').textContent()
+    if (restored !== original) throw new Error('same № did not reproduce the grid')
+    record(`${label}/№ reproduces the puzzle`, true)
+  })
+
   // 6) unplaceable words surface honestly
   await step('unplaceable surfaced', async () => {
     // Force tiny grid via advanced controls, then overload it

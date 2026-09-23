@@ -235,7 +235,20 @@ export default function App() {
               <div className="flex flex-col items-center gap-6">
                 <div className="flex w-full max-w-135 items-baseline justify-between font-mono text-xs tracking-widest uppercase">
                   <span className="font-bold">Word Search</span>
-                  <span className="text-muted-foreground">№ {result.settings.seed}</span>
+                  <label className="text-muted-foreground flex items-baseline gap-1">
+                    №
+                    <input
+                      aria-label="Puzzle number"
+                      inputMode="numeric"
+                      value={state.seed}
+                      onChange={(e) => {
+                        const n = parseInt(e.target.value.replace(/\D/g, ""), 10);
+                        puzzle.setSeed(Number.isNaN(n) ? 1 : n);
+                      }}
+                      className="focus:text-foreground focus:border-ring w-16 border-b border-dashed border-transparent bg-transparent font-mono text-xs tracking-widest outline-none hover:border-current"
+                      title="The puzzle number is the seed — same words, same number, same puzzle"
+                    />
+                  </label>
                 </div>
                 <GridPreview result={result} showAnswers={showAnswers} />
                 {result.unplaced.length > 0 && (

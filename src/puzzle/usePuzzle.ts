@@ -42,6 +42,7 @@ export function usePuzzle() {
     setDial: (dial: number) => setState((s) => ({ ...s, dial, overrides: {} })),
     setOverride: (patch: Partial<DerivedSettings>) =>
       setState((s) => ({ ...s, overrides: { ...s.overrides, ...patch } })),
+    setSeed: (seed: number) => setState((s) => ({ ...s, seed })),
     reshuffle: () => setState((s) => ({ ...s, seed: (s.seed * 48271 + 1) % 2147483647 })),
   };
 }
