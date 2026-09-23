@@ -22,6 +22,9 @@ function MarkerOverlay({ result }: { result: GenerateResult }) {
     <svg
       className="pointer-events-none absolute inset-0 h-full w-full"
       viewBox={`0 0 ${size} ${size}`}
+      // Cells can end up non-square when line-height beats aspect-square at
+      // narrow widths — stretch the coordinate space to the real grid box.
+      preserveAspectRatio="none"
       aria-hidden="true"
     >
       {result.placements.map((p, i) => {
@@ -72,7 +75,7 @@ export function GridPreview({ result, showAnswers }: { result: GenerateResult; s
               <div
                 key={`${r},${c}`}
                 role="gridcell"
-                className={`relative flex aspect-square items-center justify-center text-[clamp(0.5rem,2vw,0.95rem)] ${
+                className={`relative flex aspect-square items-center justify-center text-[clamp(0.5rem,2vw,0.95rem)] leading-none ${
                   hit ? "font-bold text-marker-ink" : answers ? "text-foreground/35" : "text-foreground/85"
                 }`}
               >
