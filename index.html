@@ -4,7 +4,15 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ws</title>
+    <meta name="description" content="Print-ready word search puzzles from your own word list — grid, word bank, and answer key as a two-page PDF." />
+    <title>Word Search Generator</title>
+    <script>
+      try {
+        const stored = localStorage.getItem("theme");
+        const dark = stored ? stored === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+        document.documentElement.classList.toggle("dark", dark);
+      } catch {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

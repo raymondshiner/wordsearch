@@ -23,21 +23,42 @@ async function verify(label, ctx) {
     }
   }
 
-  // 1) header + empty state
-  const heading = await page.getByRole('heading', { level: 1 }).textContent()
-  record(`${label}/header`, /word search generator/i.test(heading ?? ''), heading?.trim())
+  // 1) header + empty state (demo puzzle with marker strokes)
+  record(
+    `${label}/header`,
+    await page.getByRole('heading', { name: /word search generator/i }).isVisible(),
+  )
   record(`${label}/empty state`, await page.getByText(/add a few words/i).isVisible())
+  await step('empty-state demo puzzle', async () => {
+    const demoStrokes = await page.locator('line.marker-stroke').count()
+    if (demoStrokes !== 3) throw new Error(`expected 3 demo marker strokes, got ${demoStrokes}`)
+    record(`${label}/demo puzzle marked`, true)
+  })
   await page.screenshot({ path: `${SHOTS}/${label}-01-empty.png`, fullPage: true })
+
+  // 1b) dark mode toggles a class on <html> and persists
+  await step('dark mode toggle', async () => {
+    const toggle = page.getByRole('button', { name: 'Toggle theme' })
+    const wasDark = await page.evaluate(() => document.documentElement.classList.contains('dark'))
+    await toggle.click()
+    const nowDark = await page.evaluate(() => document.documentElement.classList.contains('dark'))
+    if (nowDark === wasDark) throw new Error('theme class did not change')
+    await page.screenshot({ path: `${SHOTS}/${label}-05-theme.png`, fullPage: true })
+    await page.reload({ waitUntil: 'networkidle' })
+    const persisted = await page.evaluate(() => document.documentElement.classList.contains('dark'))
+    if (persisted !== nowDark) throw new Error('theme did not persist across reload')
+    await toggle.click() // back to default for the rest of the run
+    record(`${label}/dark mode toggles + persists`, true)
+  })
 
   // 2) enter words → grid appears with word bank
   const input = page.getByRole('textbox', { name: 'Word list' })
   await input.fill('PUZZLE\nSEARCH\nHIDDEN\nLETTER\nDIAGONAL')
   await step('grid renders', async () => {
-    const grid = page.getByRole('grid')
-    await grid.waitFor({ timeout: 3000 })
-    const cells = await page.getByRole('gridcell').count()
-    if (cells !== 15 * 15) throw new Error(`expected 225 cells at default difficulty, got ${cells}`)
+    const cells = page.getByRole('gridcell')
+    await page.waitForFunction(() => document.querySelectorAll('[role="gridcell"]').length === 225, null, { timeout: 3000 })
     record(`${label}/grid 15x15 at Classic`, true)
+    void cells
   })
   record(`${label}/word count badge`, await page.getByText('5 words').isVisible())
   await page.screenshot({ path: `${SHOTS}/${label}-02-puzzle.png`, fullPage: true })
@@ -49,14 +70,14 @@ async function verify(label, ctx) {
     record(`${label}/short word rejected`, true)
   })
 
-  // 4) answers toggle highlights cells
+  // 4) answers toggle draws marker strokes
   await step('answers toggle', async () => {
     await input.fill('PUZZLE\nSEARCH\nHIDDEN')
     await page.getByRole('switch', { name: /show answers/i }).click()
-    await page.waitForTimeout(150)
-    const highlighted = await page.locator('[role="gridcell"].bg-primary').count()
-    if (highlighted < 16) throw new Error(`expected ≥16 highlighted cells, got ${highlighted}`)
-    record(`${label}/answer cells highlighted`, true, `${highlighted} cells`)
+    await page.waitForTimeout(600)
+    const strokes = await page.locator('line.marker-stroke').count()
+    if (strokes !== 3) throw new Error(`expected 3 marker strokes, got ${strokes}`)
+    record(`${label}/answer strokes drawn`, true, `${strokes} strokes`)
     await page.screenshot({ path: `${SHOTS}/${label}-03-answers.png`, fullPage: true })
     await page.getByRole('switch', { name: /show answers/i }).click()
   })
