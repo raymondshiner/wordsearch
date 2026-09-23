@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Download, Moon, RefreshCw, SlidersHorizontal, Sun } from "lucide-react";
+import { Download, Moon, Printer, RefreshCw, SlidersHorizontal, Sun } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { capacity, generate } from "@/engine";
 import { DIFFICULTY_LABELS } from "./puzzle/difficulty";
 import { GridPreview } from "./puzzle/GridPreview";
+import { PrintSheet } from "./puzzle/PrintSheet";
 import { usePuzzle } from "./puzzle/usePuzzle";
 import { useTheme } from "./theme";
 
@@ -85,7 +86,8 @@ export default function App() {
   }
 
   return (
-    <div className="mx-auto min-h-dvh max-w-6xl px-4 py-8 sm:px-6">
+    <>
+    <div className="mx-auto min-h-dvh max-w-6xl px-4 py-8 sm:px-6 print:hidden">
       <header className="mb-10 flex items-start justify-between gap-4">
         <div className="flex flex-col gap-2">
           <Wordmark />
@@ -204,10 +206,18 @@ export default function App() {
             </Collapsible>
           </Panel>
 
-          <div className="flex gap-2">
-            <Button onClick={exportPdf} disabled={!result || exporting} className="flex-1 gap-2">
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={() => window.print()} disabled={!result} className="flex-1 gap-2">
+              <Printer className="size-4" /> Print
+            </Button>
+            <Button
+              variant="outline"
+              onClick={exportPdf}
+              disabled={!result || exporting}
+              className="bg-card gap-2"
+            >
               <Download className="size-4" />
-              {exporting ? "Rendering…" : "Export PDF"}
+              {exporting ? "Rendering…" : "PDF"}
             </Button>
             <Button variant="outline" onClick={puzzle.reshuffle} disabled={!result} className="gap-2 bg-card">
               <RefreshCw className="size-4" /> Shuffle
@@ -294,5 +304,7 @@ export default function App() {
         </a>
       </footer>
     </div>
+    {result && <PrintSheet result={result} />}
+    </>
   );
 }

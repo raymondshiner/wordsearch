@@ -154,6 +154,37 @@
   }
 }
 
+/* Direct print: always ink on white, whatever the screen theme. */
+@media print {
+  :root,
+  .dark {
+    --background: #ffffff;
+    --foreground: #000000;
+    --card: #ffffff;
+    --card-foreground: #000000;
+    --muted-foreground: #444444;
+    --border: #cccccc;
+    --marker: #ffdf40;
+    --marker-ink: #000000;
+  }
+  body {
+    background: #ffffff !important;
+  }
+  * {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  .marker-stroke {
+    /* !important: the screen animation rule comes later in the file and would
+       otherwise win the cascade, leaving strokes at their pre-draw (invisible) state */
+    animation: none !important;
+    stroke-dashoffset: 0 !important;
+  }
+  .print-page-break {
+    break-before: page;
+  }
+}
+
 /* Signature: highlighter strokes draw in over found words. */
 @keyframes marker-draw {
   from {

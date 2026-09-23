@@ -30,7 +30,7 @@ async function verify(label, ctx) {
   )
   record(`${label}/empty state`, await page.getByText(/add a few words/i).isVisible())
   await step('empty-state demo puzzle', async () => {
-    const demoStrokes = await page.locator('line.marker-stroke').count()
+    const demoStrokes = await page.locator('main line.marker-stroke').count()
     if (demoStrokes !== 3) throw new Error(`expected 3 demo marker strokes, got ${demoStrokes}`)
     record(`${label}/demo puzzle marked`, true)
   })
@@ -56,7 +56,7 @@ async function verify(label, ctx) {
   await input.fill('PUZZLE\nSEARCH\nHIDDEN\nLETTER\nDIAGONAL')
   await step('grid renders', async () => {
     const cells = page.getByRole('gridcell')
-    await page.waitForFunction(() => document.querySelectorAll('[role="gridcell"]').length === 225, null, { timeout: 3000 })
+    await page.waitForFunction(() => document.querySelectorAll('main [role="gridcell"]').length === 225, null, { timeout: 3000 })
     record(`${label}/grid 15x15 at Classic`, true)
     void cells
   })
@@ -75,7 +75,7 @@ async function verify(label, ctx) {
     await input.fill('PUZZLE\nSEARCH\nHIDDEN')
     await page.getByRole('switch', { name: /show answers/i }).click()
     await page.waitForTimeout(600)
-    const strokes = await page.locator('line.marker-stroke').count()
+    const strokes = await page.locator('main line.marker-stroke').count()
     if (strokes !== 3) throw new Error(`expected 3 marker strokes, got ${strokes}`)
     record(`${label}/answer strokes drawn`, true, `${strokes} strokes`)
     await page.screenshot({ path: `${SHOTS}/${label}-03-answers.png`, fullPage: true })
@@ -84,10 +84,10 @@ async function verify(label, ctx) {
 
   // 5) shuffle regenerates
   await step('shuffle changes grid', async () => {
-    const before = await page.getByRole('grid').textContent()
+    const before = await page.locator('main').getByRole('grid').textContent()
     await page.getByRole('button', { name: /shuffle/i }).click()
     await page.waitForTimeout(200)
-    const after = await page.getByRole('grid').textContent()
+    const after = await page.locator('main').getByRole('grid').textContent()
     if (before === after) throw new Error('grid unchanged after shuffle')
     record(`${label}/shuffle regenerates`, true)
   })
@@ -97,16 +97,33 @@ async function verify(label, ctx) {
     const seedInput = page.getByRole('textbox', { name: 'Puzzle number' })
     await seedInput.fill('4242')
     await page.waitForTimeout(200)
-    const original = await page.getByRole('grid').textContent()
+    const original = await page.locator('main').getByRole('grid').textContent()
     await seedInput.fill('777')
     await page.waitForTimeout(200)
-    const different = await page.getByRole('grid').textContent()
+    const different = await page.locator('main').getByRole('grid').textContent()
     if (different === original) throw new Error('changing № did not change the grid')
     await seedInput.fill('4242')
     await page.waitForTimeout(200)
-    const restored = await page.getByRole('grid').textContent()
+    const restored = await page.locator('main').getByRole('grid').textContent()
     if (restored !== original) throw new Error('same № did not reproduce the grid')
     record(`${label}/№ reproduces the puzzle`, true)
+  })
+
+  // 5c) direct print: print media shows the sheet (puzzle + answer key), hides the app
+  await step('print stylesheet', async () => {
+    await input.fill('PUZZLE\nSEARCH\nHIDDEN')
+    await page.waitForTimeout(200)
+    await page.emulateMedia({ media: 'print' })
+    const sheetVisible = await page.locator('.print-sheet').isVisible()
+    const appHidden = await page.getByRole('textbox', { name: 'Word list' }).isHidden()
+    const printCells = await page.locator('.print-sheet [role="gridcell"]').count()
+    const keyStrokes = await page.locator('.print-sheet line.marker-stroke').count()
+    await page.emulateMedia({ media: 'screen' })
+    if (!sheetVisible) throw new Error('print sheet not visible in print media')
+    if (!appHidden) throw new Error('app UI still visible in print media')
+    if (printCells !== 450) throw new Error(`expected 450 print cells (2×15×15), got ${printCells}`)
+    if (keyStrokes !== 3) throw new Error(`expected 3 answer-key strokes, got ${keyStrokes}`)
+    record(`${label}/print sheet + answer key`, true)
   })
 
   // 6) unplaceable words surface honestly
@@ -128,7 +145,7 @@ async function verify(label, ctx) {
     await input.fill('PUZZLE\nSEARCH\nHIDDEN')
     await page.waitForTimeout(200)
     const downloadPromise = page.waitForEvent('download', { timeout: 15000 })
-    await page.getByRole('button', { name: /export pdf/i }).click()
+    await page.getByRole('button', { name: /^pdf$/i }).click()
     const download = await downloadPromise
     const name = download.suggestedFilename()
     if (!/wordsearch-\d+\.pdf/.test(name)) throw new Error(`bad filename ${name}`)
