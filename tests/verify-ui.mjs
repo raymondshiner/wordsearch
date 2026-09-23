@@ -52,8 +52,20 @@ async function verify(label, ctx) {
   })
 
   // 2) enter words → grid appears with word bank
-  const input = page.getByRole('textbox', { name: 'Word list' })
-  await input.fill('PUZZLE\nSEARCH\nHIDDEN\nLETTER\nDIAGONAL')
+  const input = page.getByRole('textbox', { name: 'Add a word' })
+  const setWords = async (words) => {
+    const clear = page.getByRole('button', { name: 'Clear all' })
+    if (await clear.isVisible()) await clear.click()
+    // Removing down to 1 word leaves no Clear all — pluck the last pill
+    const lastPill = page.getByRole('button', { name: /^Remove / })
+    if (await lastPill.count()) await lastPill.first().click()
+    for (const w of words) {
+      await input.fill(w)
+      await input.press('Enter')
+    }
+  }
+
+  await setWords(['PUZZLE', 'SEARCH', 'HIDDEN', 'LETTER', 'DIAGONAL'])
   await step('grid renders', async () => {
     const cells = page.getByRole('gridcell')
     await page.waitForFunction(() => document.querySelectorAll('main [role="gridcell"]').length === 225, null, { timeout: 3000 })
@@ -63,16 +75,22 @@ async function verify(label, ctx) {
   record(`${label}/word count badge`, await page.getByText('5 words').isVisible())
   await page.screenshot({ path: `${SHOTS}/${label}-02-puzzle.png`, fullPage: true })
 
-  // 3) validation surfaces rejects
+  // 3) validation: short word rejected inline, pill removal works
   await step('validation reports rejects', async () => {
-    await input.fill('PUZZLE\nab\nSEARCH')
-    await page.getByText(/some entries were skipped/i).waitFor({ timeout: 2000 })
+    await input.fill('ab')
+    await input.press('Enter')
+    await page.getByRole('alert').filter({ hasText: /at least 3 letters/i }).waitFor({ timeout: 2000 })
     record(`${label}/short word rejected`, true)
+  })
+  await step('pill removal', async () => {
+    await page.getByRole('button', { name: 'Remove DIAGONAL' }).click()
+    await page.getByText('4 words').waitFor({ timeout: 2000 })
+    record(`${label}/pill removes word`, true)
   })
 
   // 4) answers toggle draws marker strokes
   await step('answers toggle', async () => {
-    await input.fill('PUZZLE\nSEARCH\nHIDDEN')
+    await setWords(['PUZZLE', 'SEARCH', 'HIDDEN'])
     await page.getByRole('switch', { name: /show answers/i }).click()
     await page.waitForTimeout(600)
     const strokes = await page.locator('main line.marker-stroke').count()
@@ -109,13 +127,29 @@ async function verify(label, ctx) {
     record(`${label}/№ reproduces the puzzle`, true)
   })
 
-  // 5c) direct print: print media shows the sheet (puzzle + answer key), hides the app
+  // 5c) sheet style + preview dialog
+  await step('theme preset + preview', async () => {
+    await page.getByRole('radio', { name: 'Dragons' }).click()
+    await page.getByRole('button', { name: /preview/i }).click()
+    const dialog = page.getByRole('dialog')
+    await dialog.waitFor({ timeout: 2000 })
+    const previewCells = await dialog.locator('[role="gridcell"]').count()
+    if (previewCells !== 450) throw new Error(`expected 450 preview cells, got ${previewCells}`)
+    const glyphs = await dialog.getByText('🐉').count()
+    if (glyphs < 1) throw new Error('theme glyphs missing from preview')
+    await page.keyboard.press('Escape')
+    await dialog.waitFor({ state: 'hidden', timeout: 2000 })
+    record(`${label}/theme + preview dialog`, true)
+  })
+
+  // 5d) direct print: print media shows the themed sheet, hides the app
   await step('print stylesheet', async () => {
-    await input.fill('PUZZLE\nSEARCH\nHIDDEN')
     await page.waitForTimeout(200)
     await page.emulateMedia({ media: 'print' })
     const sheetVisible = await page.locator('.print-sheet').isVisible()
-    const appHidden = await page.getByRole('textbox', { name: 'Word list' }).isHidden()
+    const appHidden = await page.getByRole('textbox', { name: 'Add a word' }).isHidden()
+    const themed = (await page.locator('.print-sheet').textContent())?.includes('🐉')
+    if (!themed) throw new Error('theme glyphs missing from print sheet')
     const printCells = await page.locator('.print-sheet [role="gridcell"]').count()
     const keyStrokes = await page.locator('.print-sheet line.marker-stroke').count()
     await page.emulateMedia({ media: 'screen' })
@@ -134,7 +168,7 @@ async function verify(label, ctx) {
     await size.waitFor({ timeout: 2000 })
     await size.focus()
     for (let i = 0; i < 18; i++) await page.keyboard.press('ArrowLeft')
-    await input.fill('AAAAAAAA\nBBBBBBBB\nCCCCCCCC\nDDDDDDDD\nEEEEEEEE\nFFFFFFFF\nGGGGGGGG\nHHHHHHHH\nIIIIIIII')
+    await setWords(['AAAAAAAA', 'BBBBBBBB', 'CCCCCCCC', 'DDDDDDDD', 'EEEEEEEE', 'FFFFFFFF', 'GGGGGGGG', 'HHHHHHHH', 'IIIIIIII'])
     await page.getByText(/couldn't place/i).waitFor({ timeout: 3000 })
     record(`${label}/unplaced words reported`, true)
     await page.screenshot({ path: `${SHOTS}/${label}-04-unplaced.png`, fullPage: true })
@@ -142,7 +176,7 @@ async function verify(label, ctx) {
 
   // 7) PDF export produces a download
   await step('pdf export downloads', async () => {
-    await input.fill('PUZZLE\nSEARCH\nHIDDEN')
+    await setWords(['PUZZLE', 'SEARCH', 'HIDDEN'])
     await page.waitForTimeout(200)
     const downloadPromise = page.waitForEvent('download', { timeout: 15000 })
     await page.getByRole('button', { name: /^pdf$/i }).click()

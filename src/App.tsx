@@ -1,16 +1,18 @@
-import { useMemo, useState } from "react";
-import { Download, Moon, Printer, RefreshCw, SlidersHorizontal, Sun } from "lucide-react";
+import { useState } from "react";
+import { Download, Eye, Moon, Plus, Printer, RefreshCw, SlidersHorizontal, Sun, X } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
 import { capacity, generate } from "@/engine";
 import { DIFFICULTY_LABELS } from "./puzzle/difficulty";
 import { GridPreview } from "./puzzle/GridPreview";
-import { PrintSheet } from "./puzzle/PrintSheet";
+import { PrintSheet, SheetPages } from "./puzzle/PrintSheet";
+import { THEMES, banner, type SheetTheme } from "./puzzle/themes";
 import { usePuzzle } from "./puzzle/usePuzzle";
 import { useTheme } from "./theme";
 
@@ -60,10 +62,15 @@ export default function App() {
   const { dark, toggle } = useTheme();
   const [showAnswers, setShowAnswers] = useState(false);
   const [exporting, setExporting] = useState(false);
-  const wordBank = useMemo(
-    () => (result ? result.placements.map((p) => p.word).sort() : []),
-    [result],
-  );
+  const [draft, setDraft] = useState("");
+  const [inputError, setInputError] = useState<string | null>(null);
+  const [sheetTheme, setSheetTheme] = useState<SheetTheme>(THEMES[0]);
+
+  function submitWord() {
+    const error = puzzle.addWord(draft);
+    setInputError(error);
+    if (!error) setDraft("");
+  }
 
   async function exportPdf() {
     if (!result) return;
@@ -109,21 +116,70 @@ export default function App() {
       <main className="grid items-start gap-10 lg:grid-cols-[minmax(0,20rem)_1fr]">
         <div className="flex flex-col gap-8">
           <Panel title="Words">
-            <Textarea
-              aria-label="Word list"
-              placeholder={"One word per line…\nPUZZLE\nSEARCH\nHIDDEN"}
-              rows={8}
-              value={state.rawInput}
-              onChange={(e) => puzzle.setRawInput(e.target.value)}
-              className="bg-card font-mono uppercase placeholder:normal-case placeholder:font-sans"
-            />
-            <p className="text-muted-foreground font-mono text-xs">
-              {cleaned.words.length} {cleaned.words.length === 1 ? "word" : "words"} · room for
-              ~{capacity(settings.size)} letters
-            </p>
+            <form
+              className="flex gap-2"
+              onSubmit={(e) => {
+                e.preventDefault();
+                submitWord();
+              }}
+            >
+              <Input
+                aria-label="Add a word"
+                placeholder="Type a word…"
+                value={draft}
+                onChange={(e) => {
+                  setDraft(e.target.value);
+                  if (inputError) setInputError(null);
+                }}
+                className="bg-card font-mono uppercase placeholder:font-sans placeholder:normal-case"
+              />
+              <Button type="submit" variant="outline" className="bg-card gap-1.5" disabled={!draft.trim()}>
+                <Plus className="size-4" /> Add
+              </Button>
+            </form>
+            {inputError && (
+              <p role="alert" className="text-destructive text-sm">
+                {inputError}
+              </p>
+            )}
+            {state.words.length > 0 && (
+              <ul aria-label="Your words" className="flex flex-wrap gap-1.5">
+                {state.words.map((word) => (
+                  <li
+                    key={word}
+                    className="bg-secondary flex items-center gap-1 rounded-full py-1 pr-1 pl-3 font-mono text-sm"
+                  >
+                    {word}
+                    <button
+                      type="button"
+                      aria-label={`Remove ${word}`}
+                      onClick={() => puzzle.removeWord(word)}
+                      className="hover:bg-muted-foreground/20 rounded-full p-0.5"
+                    >
+                      <X className="size-3.5" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div className="flex items-baseline justify-between">
+              <p className="text-muted-foreground font-mono text-xs">
+                {state.words.length} {state.words.length === 1 ? "word" : "words"} · room for
+                ~{capacity(settings.size)} letters
+              </p>
+              {state.words.length > 1 && (
+                <button
+                  type="button"
+                  onClick={puzzle.clearWords}
+                  className="text-muted-foreground hover:text-foreground font-mono text-xs underline underline-offset-2"
+                >
+                  Clear all
+                </button>
+              )}
+            </div>
             {cleaned.rejected.length > 0 && (
               <Alert>
-                <AlertTitle>Some entries were skipped</AlertTitle>
+                <AlertTitle>Some words don't fit this grid</AlertTitle>
                 <AlertDescription>
                   <ul className="list-disc pl-4">
                     {cleaned.rejected.map((r) => (
@@ -206,10 +262,65 @@ export default function App() {
             </Collapsible>
           </Panel>
 
+          <Panel title="Sheet style">
+            <div role="radiogroup" aria-label="Sheet style" className="grid grid-cols-2 gap-1.5">
+              {THEMES.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={sheetTheme.id === t.id}
+                  onClick={() => setSheetTheme(t)}
+                  className={`flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-left font-mono text-xs transition-colors ${
+                    sheetTheme.id === t.id
+                      ? "border-foreground bg-card"
+                      : "border-border bg-card/50 text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <span aria-hidden="true" className="text-sm">
+                    {t.glyphs[0] ?? "▦"}
+                  </span>
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          </Panel>
+
           <div className="flex flex-wrap gap-2">
             <Button onClick={() => window.print()} disabled={!result} className="flex-1 gap-2">
               <Printer className="size-4" /> Print
             </Button>
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="outline" disabled={!result} className="bg-card gap-2">
+                  <Eye className="size-4" /> Preview
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-h-[85dvh] max-w-3xl overflow-y-auto">
+                <DialogTitle className="font-mono text-sm tracking-widest uppercase">
+                  Print preview
+                </DialogTitle>
+                {result && (
+                  <div
+                    className="flex flex-col gap-6"
+                    style={
+                      {
+                        "--foreground": "#22252a",
+                        "--marker-ink": "#22252a",
+                        "--marker": "#ffdf40",
+                        "--border": "#d6d3cd",
+                      } as React.CSSProperties
+                    }
+                  >
+                    <SheetPages
+                      result={result}
+                      theme={sheetTheme}
+                      pageClassName="rounded-md bg-white p-6 text-neutral-900 [box-shadow:var(--sheet-shadow)] sm:p-8"
+                    />
+                  </div>
+                )}
+              </DialogContent>
+            </Dialog>
             <Button
               variant="outline"
               onClick={exportPdf}
@@ -243,6 +354,16 @@ export default function App() {
           <div className="bg-card rounded-lg p-6 [box-shadow:var(--sheet-shadow)] sm:p-10">
             {result ? (
               <div className="flex flex-col items-center gap-6">
+                {sheetTheme.glyphs.length > 0 && (
+                  <div
+                    aria-hidden="true"
+                    className="flex w-full max-w-135 justify-between text-base leading-none select-none"
+                  >
+                    {banner(sheetTheme).map((g, i) => (
+                      <span key={i}>{g}</span>
+                    ))}
+                  </div>
+                )}
                 <div className="flex w-full max-w-135 items-baseline justify-between font-mono text-xs tracking-widest uppercase">
                   <span className="font-bold">Word Search</span>
                   <label className="text-muted-foreground flex items-baseline gap-1">
@@ -274,9 +395,12 @@ export default function App() {
                 )}
                 <div className="border-border w-full max-w-135 border-t border-dashed pt-4">
                   <div className="flex flex-wrap justify-center gap-x-5 gap-y-1.5 font-mono text-sm">
-                    {wordBank.map((w) => (
-                      <span key={w}>{w}</span>
-                    ))}
+                    {result.placements
+                      .map((p) => p.word)
+                      .sort()
+                      .map((w) => (
+                        <span key={w}>{w}</span>
+                      ))}
                   </div>
                 </div>
               </div>
@@ -304,7 +428,7 @@ export default function App() {
         </a>
       </footer>
     </div>
-    {result && <PrintSheet result={result} />}
+    {result && <PrintSheet result={result} theme={sheetTheme} />}
     </>
   );
 }
