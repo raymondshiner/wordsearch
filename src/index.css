@@ -155,6 +155,9 @@
 }
 
 /* Direct print: always ink on white, whatever the screen theme. */
+@page {
+  margin: 0.75in;
+}
 @media print {
   :root,
   .dark {

@@ -60,7 +60,7 @@ function MarkerOverlay({ result }: { result: GenerateResult }) {
 export function GridPreview({ result, showAnswers }: { result: GenerateResult; showAnswers: boolean }) {
   const answers = showAnswers ? answerCells(result) : null;
   return (
-    <div className="relative w-full max-w-135">
+    <div className="relative mx-auto w-full max-w-135">
       {showAnswers && <MarkerOverlay result={result} />}
       <div
         role="grid"

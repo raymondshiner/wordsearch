@@ -42,7 +42,7 @@ export function SheetPages({
         <Banner theme={theme} />
         <SheetHeader title="Word Search" seed={result.settings.seed} theme={theme} />
         <GridPreview result={result} showAnswers={false} />
-        <div className="border-t border-dashed pt-4">
+        <div className="mx-auto w-full max-w-135 border-t border-dashed pt-4">
           <div className="flex flex-wrap justify-center gap-x-5 gap-y-1.5 font-mono text-sm">
             {words.map((w) => (
               <span key={w}>{w}</span>
@@ -63,7 +63,7 @@ export function SheetPages({
 /** Rendered only under `@media print`. */
 export function PrintSheet({ result, theme }: { result: GenerateResult; theme: SheetTheme }) {
   return (
-    <div className="print-sheet mx-auto hidden max-w-[7in] flex-col gap-6 print:flex">
+    <div className="print-sheet mx-auto hidden max-w-135 flex-col gap-6 print:flex">
       <SheetPages result={result} theme={theme} />
     </div>
   );
